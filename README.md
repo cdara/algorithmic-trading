@@ -12,5 +12,7 @@ The example strategy I will be implementing in this script is the Long-Short equ
 
 The driving force behind success, though, is how the stocks are ranked. The ranking can make or break your algorithm. If your ranking system is good, ideally you’ll be longing stocks that are green the following days and shorting ones that aren’t doing so well. However, a bad ranking system could see your algorithm longing poorly performing stocks and, perhaps more dangerously, shorting high performing stocks, which could cause your algorithm to quickly lose you money.
 
-:warning: NO INVESTMENT ADVICE
+⚠️NO INVESTMENT ADVICE
+
+
 <sub>Disclaimer: The Content is for informational purposes only, you should not construe any such information or other material as legal, tax, investment, financial, or other advice.</sub>
