@@ -22,14 +22,14 @@ class LongShort {
         })
 
         //For example: Stocks list for research
-        let stocks = ['AAPL','MSFT','GOOGL','AMZN','BRK.B','NVDA',
-        'TSLA','META','JNJ','UNH','V','XOM','TSM','WMT','JPM','PG',
-        'NVO','LLY','MA','CVX','HD','MRK','ABBV','KO','BABA','AVGO',
-        'ASML','ORCL','PEP','PFE','AZN','BAC','TMO','COST','BHP',
-        'CSCO','SHEL','MCD','NVS','CRM','NKE','TM','DIS','TMUS',
-        'ABT','DHR','ACN','LIN','ADBE','VZ','UPS','TXN','CMCSA',
-        'NEE','TTE','PM','NFLX','SAP','AMD','BMY','FMX','RTX','WFC',
-        'MS','T','HSBC','SNY','QCOM','INTC','UL','AMGN'];
+        let stocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'BRK.B', 'NVDA',
+            'TSLA', 'META', 'JNJ', 'UNH', 'V', 'XOM', 'TSM', 'WMT', 'JPM', 'PG',
+            'NVO', 'LLY', 'MA', 'CVX', 'HD', 'MRK', 'ABBV', 'KO', 'BABA', 'AVGO',
+            'ASML', 'ORCL', 'PEP', 'PFE', 'AZN', 'BAC', 'TMO', 'COST', 'BHP',
+            'CSCO', 'SHEL', 'MCD', 'NVS', 'CRM', 'NKE', 'TM', 'DIS', 'TMUS',
+            'ABT', 'DHR', 'ACN', 'LIN', 'ADBE', 'VZ', 'UPS', 'TXN', 'CMCSA',
+            'NEE', 'TTE', 'PM', 'NFLX', 'SAP', 'AMD', 'BMY', 'FMX', 'RTX', 'WFC',
+            'MS', 'T', 'HSBC', 'SNY', 'QCOM', 'INTC', 'UL', 'AMGN'];
 
         this.stockList = stocks.map(item => ({ name: item, pc: 0 }));
 
@@ -56,7 +56,47 @@ class LongShort {
         log('Stock Market opened!');
 
         //Rebalance the portfolio every minute, making necessary trades.
-        var spin = setInterval(async() => {})
+        var spin = setInterval(async () => {
+            //Figure out when the market will close so we can prepare to sell beforehand.
+            try {
+                let clock = await this.alpaca.getClock();
+                let closingTime = new Date(clock.next_close.substring(0, clock.next_close.length - 6));
+                let currentTime = new Date(clock.timestamp.substring(0, clock.timestamp.length - 6));
+                this.timeToClose = Math.abs(closingTime - currentTime);
+            } catch (err) {
+                log(err.error);
+            }
+
+            const INTERVAL = 15; //For minutes;
+
+            if (this.timeToClose < (ONE_MINUTE * INTERVAL)) {
+                //Close all stock positions before 15 minutes of stock market close.
+                log('Stock Market Closing Soon. Now Closing All Positions.');
+
+                try {
+                    let positions = await;
+                    this.alpaca.getPositions();
+                    await Promise.all(positions.map(position = this.submitOrder({
+                        quantity: Math.abs(position.qty),
+                        stock: position.symbol,
+                        side: position.side === PositionType.LONG ? SideType.SELL : SideType.BUY,
+                    })));
+                } catch (err) {
+                    log(err.error);
+                }
+
+                clearInterval(spin);
+                log(`Sleeping until stock market close (${INTERVAL} minutes).`);
+
+                setTimeout(() => {
+                    //Run script again after stock market close for next trading day
+                    this.run();
+                }, ONE_MINUTE * INTERVAL)
+            } else {
+                //Rebalance the portfolio
+                await this.rebalance();
+            }
+        }, ONE_MINUTE);
     }
 
 }
