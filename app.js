@@ -151,6 +151,22 @@ class LongShort {
 
         //Clear existing orders again.
         await this.cancelExistingOrders();
+
+        log(`We are taking a long position in: ${this.long.toString()}`);
+        log(`We are taking a short position in: ${this.short.toString()}`);
+
+        /*Remove positions that are no longer in the short or long list,
+        * and make a list of positions that do not need to change.
+        * Adjust position quantities if needed.
+        */
+        let positions;
+        try {
+            positions = await this.alpaca.getPositions();
+        } catch (err) {
+            log(err.error);
+        }
+
+        let executed = { long: [], short: [] }
     }
 }
 
