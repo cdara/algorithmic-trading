@@ -99,5 +99,58 @@ class LongShort {
         }, ONE_MINUTE);
     }
 
+    //Spin script until the market is open
+    async awaitMarketOpen() {
+        return new Promise(resolve => {
+            const check = async () => {
+                try {
+                    let clock = await this.alpaca.getClock();
+                    if (clock.is_open) {
+                        resolve();
+                    } else {
+                        let openTime = new Date(clock.next_open.substring(0, clock.next_close.length - 6));
+                        let currentTime = new Date(clock.timestamp.substring(0, clock.timestamp.length - 6));
+                        this.timeToClose = Math.floor((openTime - currentTime) / 1000 / 60);
+                        log(`${this.timeToClose} minutes til next day market open.`);
+                        setTimeout(check, ONE_MINUTE);
+                    }
+                } catch (err) {
+                    log(err.error);
+                }
+            }
+            check();
+        })
+    }
+
+    //Cancel exsisting orders
+    async cancelExistingOrders() {
+        let orders;
+        try {
+            orders = await this.alpaca.getOrders({
+                status: 'open',
+                direction: 'desc'
+            })
+        } catch (err) {
+            log(err.error);
+        }
+        return Promise.all(orders.map(order => {
+            return new Promise(async (resolve) => {
+                try {
+                    await this.alpaca.cancelOrder(order.id);
+                } catch { err } {
+                    log(err.error);
+                }
+                resolve();
+            })
+        }))
+    }
+
+    //Rebalance our market position after an update.
+    async rebalance() {
+        await this.rerank();
+
+        //Clear existing orders again.
+        await this.cancelExistingOrders();
+    }
 }
 
